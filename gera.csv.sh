@@ -1,6 +1,25 @@
 export LC_NUMERIC=pt_BR.utf8
 vArqFinal=energia.a.csv
 
+vOptApaga=0
+vOptTXT=0
+vOptCSV=0
+vOptUsina=0
+vOptADDUsina=0
+while getopts :rtcua vOpcao
+do
+  case $vOpcao in 
+    r) vOptApaga=1   ;;
+    t) vOptTXT=1     ;;
+    c) vOptCSV=1     ;;
+    u) vOptUsina=1   ;;
+    a) vOptADDUsina=1;;
+  esac
+done
+
+shift $(( OPTIND -1))
+vParam="$*"
+
 _apaga(){
   echo "# Apagando TXTs..."
   find 20* -name '*.txt' -exec rm {} \; 
@@ -117,6 +136,15 @@ _csv(){
 #          # print "# DEBUG - Inst2: ",vInstal" : "vVenc" : "vMesCab" : "vTotPagar
       }
 
+# 
+# vA= Descricao
+# vA= Mes
+# vA= kWh
+# vA= Tarifa c/ trib
+# vA= Total Consumo
+# vA= Credito
+#
+
       /^060[0-9] .*Band/ { 
         i+=1
         # esquema para pegar posicao do 2o campo, que sempre é MES/YY
@@ -182,6 +210,9 @@ _csv(){
         vA[i]=vA[i]";;;"vValTot";"vCredito
         next 
       }     
+      # Linhas de contas de meses anteriores, 
+      # itens que tem credito
+      # tarifas , juros e multas
        /^(0699|080[1-9]|0999) / { 
         i+=1
         # esquema para pegar posicao do 2o campo, que sempre é MES/YY
@@ -383,9 +414,9 @@ _add_usina(){
   # ' energia.cav
 }
 
-[[ $* =~ -rm ]] && shift && _apaga
-[[ $* =~ -t  ]] && shift && _txt
-[[ $* =~ -c  ]] && shift && _csv "$*"
-[[ $* =~ -u  ]] && shift && _usina
-[[ $* =~ -a  ]] && shift && _add_usina
+[ $vOptApaga    -eq 1 ] && _apaga
+[ $vOptTXT      -eq 1 ] && _txt
+[ $vOptCSV      -eq 1 ] && _csv "$vParam"
+[ $vOptUsina    -eq 1 ] && _usina
+[ $vOptADDUsina -eq 1 ] && _add_usina
 #_c
