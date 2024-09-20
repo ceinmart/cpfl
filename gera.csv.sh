@@ -1,5 +1,14 @@
+export PATH=.:/bin:$PATH
+export LD_LIBRARY_PATH=.:/bin:$LD_LIBRARY_PATH
+
+#
 export LC_NUMERIC=pt_BR.utf8
+export LC_CTYPE=pt_BR.UTF-8
+
 vArqFinal=energia.a.csv
+vTmp=/tmp/tmp.gera.csv.$$
+touch $vTmp
+trap "rm -f $vTmp* ; exit " 0 1 2 
 
 vOptApaga=0
 vOptTXT=0
@@ -17,6 +26,14 @@ do
   esac
 done
 
+if [ $# -eq 0 ] ; then 
+  vOptApaga=0
+  vOptTXT=1
+  vOptCSV=1
+  vOptUsina=1
+  vOptADDUsina=1
+fi 
+
 shift $(( OPTIND -1))
 vParam="$*"
 
@@ -24,9 +41,16 @@ _apaga(){
   echo "# Apagando TXTs..."
   find 20* -name '*.txt' -exec rm {} \; 
   }
+
 _txt() { 
   echo "# Gerando TXTs..."
-  find . -name '*.pdf' | while read vArq
+  find 20* -name '*.pdf'  > $vTmp.pdfs
+  if [ $# -gt 0 ] ; then 
+    cat $vTmp.pdfs | grep -E "$*" > $vTmp.pdfs2
+    mv $vTmp.pdfs2 $vTmp.pdfs
+  fi 
+  echo "  $(cat $vTmp.pdfs | wc -l) PDFs"
+  while read vArq
   do 
     [[ $vArq =~ .*88800.*pdf ]] && continue 
     vD=$(dirname "$vArq")
@@ -37,22 +61,24 @@ _txt() {
     pdftotext -layout -enc Latin1 "$vArq"
     iconv -f Latin1 -t ascii//translit -- "$vD/$vA" |  tr -d '['\''^~´`"]' >  "$vD/$vB"
     mv -f "$vD/$vB" "$vD/$vA"
-  done 
+  done  < $vTmp.pdfs
+  echo
 }
+
 _csv(){
   echo 
   echo "# Extraindo dados..."
+  find 20* -name '*.txt'  > $vTmp.txts
+  echo "  $(cat $vTmp.txts | wc -l ) TXTs"
 
-  
   echo "arquivo;endereço;PN;INSTALAÇÃO;Mes;Total a Pagar;Dt Vencimento;Data da Leitura;Descricao;Mes;kWh;Tarifa c/ trib.;Total consumo;Credito" > $vArqFinal
-
-  find . -name '*.txt' | while read vArquivo
+  while read vArquivo
   do
     [ $# -ne 0 ] && [[ ! $vArquivo =~ $1 ]] && continue
     echo "# $vArquivo"
     #iconv -f Latin1 -t ascii//translit "$vArquivo"  |\
     cat "$vArquivo" |\
-    egrep -v "^ *$" |\
+    grep -Ev "^ *$" |\
     sed -e 's/^ *//g' |\
     gawk  -v IGNORECASE=1 --use-lc-numeric -v vArq="$vArquivo" '
       function ltrim(s) { sub(/^[ \t\r\n]+/, "", s); return s }
@@ -211,7 +237,7 @@ _csv(){
         next 
       }     
       # Linhas de contas de meses anteriores, 
-      # itens que tem credito
+      # itens que tem credito ou devolucao
       # tarifas , juros e multas
        /^(0699|080[1-9]|0999) / { 
         i+=1
@@ -227,7 +253,7 @@ _csv(){
         vA[i]=vA[i]";"vMesLin # mes 
         vValTot=trata_num($2) # valor total       # 591,76
         vCredito=""
-        if ( vDesc ~ /Ressar/ && vValTot > 0 ) vValTot=vValTot * -1
+        if ( vDesc ~ /^0999|Ressar|Credito|Devol/ && vValTot > 0 ) vValTot=vValTot * -1
         if ( vValTot < 0 ) { vCredito=vValTot ; vValTot="" }
         vA[i]=vA[i]";;;"vValTot";"vCredito
         next 
@@ -300,7 +326,7 @@ _csv(){
 
       }
     ' | sort -u >> $vArqFinal
-  done  
+  done < $vTmp.txts
 }
 
 _c(){ 
@@ -415,8 +441,7 @@ _add_usina(){
 }
 
 [ $vOptApaga    -eq 1 ] && _apaga
-[ $vOptTXT      -eq 1 ] && _txt
+[ $vOptTXT      -eq 1 ] && _txt "$vParam"
 [ $vOptCSV      -eq 1 ] && _csv "$vParam"
 [ $vOptUsina    -eq 1 ] && _usina
 [ $vOptADDUsina -eq 1 ] && _add_usina
-#_c
