@@ -362,6 +362,8 @@ _c(){
 }
 
 _usina(){
+  echo 
+  echo "# Extraindo dados da usina para usina.csv..."
   sed -e 's///g' 103*.csv |\
   cut -f1,14 -d\;  |\
   iconv -f utf8 -t ascii//translit//ignore |\
@@ -388,6 +390,8 @@ _usina(){
 }
 
 _add_usina(){
+  echo 
+  echo "# Unificando Contas + Usina no energia.csv..."
   > energia.csv
   while read vLinha
   do
