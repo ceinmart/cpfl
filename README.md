@@ -3,7 +3,9 @@ Shell extrator de dados de contas da CPFL Piratininga
 
 # SINTAXE
 
-```gera.csv.sh [-rtcua] [-d dir] <filtro>
+```
+ $ gera.csv.sh [-rtcua] [-d dir] <filtro>
+
  -r : apaga todos os TXTs existentes
  -t : gera TXTs faltantes
  -c : gera CSV a partir dos TXTs
