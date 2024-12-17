@@ -15,7 +15,8 @@ vOptTXT=0
 vOptCSV=0
 vOptUsina=0
 vOptADDUsina=0
-while getopts :rtcua vOpcao
+vOptDirContas=contas.cpfl
+while getopts :rtcuad: vOpcao
 do
   case $vOpcao in 
     r) vOptApaga=1   ;;
@@ -23,10 +24,11 @@ do
     c) vOptCSV=1     ;;
     u) vOptUsina=1   ;;
     a) vOptADDUsina=1;;
+    d) vOptDirContas=$OPTARG ;;
   esac
 done
 
-if [ $# -eq 0 ] ; then 
+if [ $vOptApaga -eq 0 -a $vOptTXT -eq 0 -a $vOptCSV -eq 0 -a $vOptUsina -eq 0 -a $vOptADDUsina -eq 0 ] ; then 
   vOptApaga=0
   vOptTXT=1
   vOptCSV=1
@@ -39,12 +41,12 @@ vParam="$*"
 
 _apaga(){
   echo "# Apagando TXTs..."
-  find 20* -name '*.txt' -exec rm {} \; 
+  find $vOptDirContas/20* -name '*.txt' -exec rm {} \; 
   }
 
 _txt() { 
   echo "# Gerando TXTs..."
-  find 20* -name '*.pdf'  > $vTmp.pdfs
+  find $vOptDirContas/20* -name '*.pdf'  > $vTmp.pdfs
   if [ $# -gt 0 ] ; then 
     cat $vTmp.pdfs | grep -E "$*" > $vTmp.pdfs2
     mv $vTmp.pdfs2 $vTmp.pdfs
@@ -68,7 +70,7 @@ _txt() {
 _csv(){
   echo 
   echo "# Extraindo dados..."
-  find 20* -name '*.txt'  > $vTmp.txts
+  find $vOptDirContas/20* -name '*.txt'  > $vTmp.txts
   echo "  $(cat $vTmp.txts | wc -l ) TXTs"
 
   echo "arquivo;endereço;PN;INSTALAÇÃO;Mes;Total a Pagar;Dt Vencimento;Data da Leitura;Descricao;Mes;kWh;Tarifa c/ trib.;Total consumo;Credito" > $vArqFinal
