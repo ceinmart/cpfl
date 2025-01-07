@@ -1,3 +1,6 @@
+#
+# https://github.com/ceinmart/cpfl
+#
 export PATH=.:/bin:$PATH
 export LD_LIBRARY_PATH=.:/bin:$LD_LIBRARY_PATH
 
@@ -5,39 +8,51 @@ export LD_LIBRARY_PATH=.:/bin:$LD_LIBRARY_PATH
 export LC_NUMERIC=pt_BR.utf8
 export LC_CTYPE=pt_BR.UTF-8
 
-vArqFinal=energia.a.csv
-vTmp=/tmp/tmp.gera.csv.$$
-touch $vTmp
-trap "rm -f $vTmp* ; exit " 0 1 2 
+_start(){ 
+  vArqFinal=energia.a.csv
+  vTmp=/tmp/tmp.gera.csv.$$
+  touch $vTmp
+  trap "rm -f $vTmp* ; exit " 0 1 2 
 
-vOptApaga=0
-vOptTXT=0
-vOptCSV=0
-vOptUsina=0
-vOptADDUsina=0
-vOptDirContas=contas.cpfl
-while getopts :rtcuad: vOpcao
-do
-  case $vOpcao in 
-    r) vOptApaga=1   ;;
-    t) vOptTXT=1     ;;
-    c) vOptCSV=1     ;;
-    u) vOptUsina=1   ;;
-    a) vOptADDUsina=1;;
-    d) vOptDirContas=$OPTARG ;;
-  esac
-done
-
-if [ $vOptApaga -eq 0 -a $vOptTXT -eq 0 -a $vOptCSV -eq 0 -a $vOptUsina -eq 0 -a $vOptADDUsina -eq 0 ] ; then 
   vOptApaga=0
-  vOptTXT=1
-  vOptCSV=1
-  vOptUsina=1
-  vOptADDUsina=1
-fi 
+  vOptTXT=0
+  vOptCSV=0
+  vOptUsina=0
+  vOptADDUsina=0
 
-shift $(( OPTIND -1))
-vParam="$*"
+  vOptDirLocal=
+  vOptDirContas=contas.cpfl
+  vOptArqUsinaOri='103*.csv'
+
+  if [ -f ./gera.csv.conf ] ; then
+    echo "# Carregando parametros:"   
+    cat -n ./gera.csv.conf
+    source ./gera.csv.conf
+  fi 
+
+  while getopts :rtcuad: vOpcao
+  do
+    case $vOpcao in 
+      r) vOptApaga=1   ;;
+      t) vOptTXT=1     ;;
+      c) vOptCSV=1     ;;
+      u) vOptUsina=1   ;;
+      a) vOptADDUsina=1;;
+      d) vOptDirContas=$OPTARG ;;
+    esac
+  done
+
+  if [ $vOptApaga -eq 0 -a $vOptTXT -eq 0 -a $vOptCSV -eq 0 -a $vOptUsina -eq 0 -a $vOptADDUsina -eq 0 ] ; then 
+    vOptApaga=0
+    vOptTXT=1
+    vOptCSV=1
+    vOptUsina=1
+    vOptADDUsina=1
+  fi 
+
+  shift $(( OPTIND -1))
+  vParam="$*"
+}
 
 _apaga(){
   echo "# Apagando TXTs..."
@@ -366,7 +381,7 @@ _c(){
 _usina(){
   echo 
   echo "# Extraindo dados da usina para usina.csv..."
-  sed -e 's///g' 103*.csv |\
+  sed -e 's///g' $vOptArqUsinaOri |\
   cut -f1,14 -d\;  |\
   iconv -f utf8 -t ascii//translit//ignore |\
   awk -F";" '
@@ -446,8 +461,20 @@ _add_usina(){
   # ' energia.cav
 }
 
+_d(){ date +"%Y-%m-%d %H:%M:%S" ; } 
+
+{
+echo "INICIO : $(_d)"
+_start "$*"
+
 [ $vOptApaga    -eq 1 ] && _apaga
 [ $vOptTXT      -eq 1 ] && _txt "$vParam"
 [ $vOptCSV      -eq 1 ] && _csv "$vParam"
 [ $vOptUsina    -eq 1 ] && _usina
 [ $vOptADDUsina -eq 1 ] && _add_usina
+echo
+if [ ! -z "$vOptDirLocal" ] ;then 
+  cp -pv energia.csv $vOptDirLocal
+fi 
+echo "FIM : $(_d)"
+} |& tee log.gera.csv.log
